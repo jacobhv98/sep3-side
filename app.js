@@ -153,7 +153,7 @@ const opgaveHandlinger = {
 // Siden læser repoets filer direkte fra GitHub og skriver tilbage som almindelige commits,
 // så hver rettelse og upload ligger i git-historikken og kan rulles tilbage.
 
-const LAASEFIL = 'data/laase.json';
+const LAASEFIL = 'Github Filer/data/laase.json';
 const TEKSTFIL = /\.(md|txt|csv|tsv|json|m|py|js|mjs|ts|css|html|xml|yml|yaml|tex|bib|ini|toml)$/i;
 const BILLEDE = /\.(png|jpe?g|gif|svg|webp|bmp)$/i;
 // Samme filtyper som "binary" i .gitattributes: git kan ikke flette dem, så de skal låses før redigering.
@@ -186,7 +186,7 @@ async function indlaesFiler() {
 }
 
 async function indlaesLaase() {
-  const { data } = await api(`/repos/${REPO}/contents/${LAASEFIL}?ref=${GREN}`, { tom404: true });
+  const { data } = await api(`/repos/${REPO}/contents/${kodetSti(LAASEFIL)}?ref=${GREN}`, { tom404: true });
   laase = data ? JSON.parse(fraBase64Tekst(data.content)) : {};
   laaseSha = data?.sha ?? null;
 }
@@ -399,7 +399,7 @@ async function commitTrae(elementer, besked) {
   throw new Error('Repoet ændrede sig under upload tre gange i træk. Prøv igen om lidt.');
 }
 
-// ----- Låse (data/laase.json) -----
+// ----- Låse (Github Filer/data/laase.json) -----
 
 async function skrivLaas(sti, laas) {
   const login = await hentMitLogin();
@@ -412,7 +412,7 @@ async function skrivLaas(sti, laas) {
     if (laas) nye[sti] = { login, navn: laas.navn || login, siden: new Date().toISOString(), opgave: laas.opgave || undefined };
     else delete nye[sti];
     try {
-      await api(`/repos/${REPO}/contents/${LAASEFIL}`, {
+      await api(`/repos/${REPO}/contents/${kodetSti(LAASEFIL)}`, {
         metode: 'PUT',
         data: {
           message: `${laas?.opgave ? `#${laas.opgave} ` : ''}${laas ? 'Lås' : 'Frigiv'} ${sti}`,
