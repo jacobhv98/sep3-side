@@ -36,7 +36,9 @@ async function api(sti, { metode = 'GET', data, raa = false, tom404 = false } = 
   if (!svar.ok) {
     const tekst = await svar.text();
     if (svar.status === 409 || svar.status === 422) {
-      throw Object.assign(new Error(`GitHub afviste ændringen (${svar.status}): ${tekst.slice(0, 200)}`), { status: svar.status });
+      let grund = tekst.slice(0, 200);
+      try { grund = JSON.parse(tekst).message || grund; } catch { /* ikke JSON: brug teksten som den er */ }
+      throw Object.assign(new Error(`GitHub afviste ændringen (${svar.status}): ${grund}. Intet er gemt. Tjek felterne og dit token, og prøv igen.`), { status: svar.status });
     }
     if (svar.status === 401 || svar.status === 404) {
       throw new Error(sessionToken
@@ -73,6 +75,18 @@ const $ = (sel, rod = document) => rod.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const dato = (iso) => new Date(iso).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' });
 const labels = (issue) => issue.labels.map((l) => (typeof l === 'string' ? l : l.name));
+const EMNE_NAVNE = { 'emne:koncept': 'Koncept', 'emne:tegning': 'Tegning', 'emne:beregning': 'Beregning', 'emne:rapport': 'Rapport', 'emne:moede': 'Møde' };
+const initialer = (login) => login.slice(0, 2).toUpperCase();
+
+// Ikoner: egne SVG'er i én stregtykkelse.
+const IKON = {
+  mappe: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  fil: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
+  laas: '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  commit: '<circle cx="12" cy="12" r="3.5"/><path d="M3 12h5.5M15.5 12H21"/>',
+  opgave: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+};
+const ikon = (navn) => `<svg class="ik" viewBox="0 0 24 24" aria-hidden="true">${IKON[navn]}</svg>`;
 
 function visFejl(fejl) {
   const boks = $('#besked');
@@ -111,22 +125,36 @@ async function indlaesOpgaver() {
   const issues = (await hentAlle(`/repos/${REPO}/issues?state=all`))
     .filter((i) => !i.pull_request && !labels(i).includes(LABEL_BESLUTNING));
 
+  const tavle = $('.tavle');
+  if (!tavle.dataset.set) {   // tagsene glider kun ind ved første indlæsning, ikke efter hver handling
+    tavle.dataset.set = '1';
+    tavle.dataset.foerste = 'ja';
+    setTimeout(() => delete tavle.dataset.foerste, 900);
+  }
   document.querySelectorAll('.kolonne ul').forEach((ul) => (ul.innerHTML = ''));
+  const antal = { todo: 0, 'i-gang': 0, udfoert: 0 };
   for (const issue of issues) {
     const status = statusFor(issue);
     if (!status) continue;
+    antal[status]++;
     const ul = $(`.kolonne[data-status="${status}"] ul`);
-    const emner = labels(issue).filter((l) => l !== LABEL_I_GANG).join(', ');
+    const klasse = { todo: 'todo', 'i-gang': 'go', udfoert: 'done' }[status];
+    const emner = labels(issue).filter((l) => l.startsWith('emne:')).map((l) => EMNE_NAVNE[l] || l.replace('emne:', ''));
+    const login = issue.assignee?.login;
     ul.insertAdjacentHTML('beforeend', `
-      <li class="kort" data-nr="${issue.number}">
-        <a href="${issue.html_url}" target="_blank" rel="noopener">#${issue.number} ${esc(issue.title)}</a>
-        <div class="meta">${esc(emner)}${issue.assignee ? ' · ' + esc(issue.assignee.login) : ''} · ${issue.comments} kommentarer</div>
+      <li class="kort ${klasse}" data-nr="${issue.number}">
+        <div class="kort-hoved"><span class="nr">#${issue.number}</span><a class="titel" href="${issue.html_url}" target="_blank" rel="noopener">${esc(issue.title)}</a></div>
+        <div class="meta">${emner.map((e) => `<span class="emne">${esc(e)}</span>`).join('')}${login ? `<span class="hvem" aria-hidden="true">${esc(initialer(login))}</span><span class="login">${esc(login)}</span>` : ''}<span class="komm">${issue.comments} ${issue.comments === 1 ? 'kommentar' : 'kommentarer'}</span></div>
         <div class="handlinger">
           ${status === 'todo' ? '<button data-handling="start">Start</button>' : ''}
           ${status !== 'udfoert' ? '<button data-handling="udfoert">Udført</button>' : '<button data-handling="genaabn" class="sekundaer">Genåbn</button>'}
           <button data-handling="kommenter" class="sekundaer">Kommentér</button>
         </div>
       </li>`);
+  }
+  for (const [status, n] of Object.entries(antal)) {
+    $(`.kolonne[data-status="${status}"] .antal`).textContent = n;
+    $(`#lamper .lampe[data-status="${status}"] b`).textContent = n;
   }
 }
 
@@ -215,10 +243,10 @@ function tegnFiltrae(soeg) {
     const barn = node[navn];
     if (barn.__sti) {
       const laas = laase[barn.__sti];
-      return `<li data-sti="${esc(barn.__sti)}" class="${barn.__sti === valgtSti ? 'valgt' : ''}">📄 ${esc(navn)}${laas ? ` <span class="laas" title="Låst af ${esc(laas.login)}">🔒 ${esc(laas.navn || laas.login)}</span>` : ''}</li>`;
+      return `<li data-sti="${esc(barn.__sti)}" class="${barn.__sti === valgtSti ? 'valgt' : ''}">${ikon('fil')}<span>${esc(navn)}</span>${laas ? `<span class="laas" title="Låst af ${esc(laas.login)}">${ikon('laas')}${esc(laas.navn || laas.login)}</span>` : ''}</li>`;
     }
     const mappe = sti ? `${sti}/${navn}` : navn;
-    return `<li><details${soeg ? ' open' : ''}><summary data-mappe="${esc(mappe)}">📁 ${esc(navn)}</summary><ul>${tegn(barn, mappe)}</ul></details></li>`;
+    return `<li><details${soeg ? ' open' : ''}><summary data-mappe="${esc(mappe)}">${ikon('mappe')}${esc(navn)}</summary><ul>${tegn(barn, mappe)}</ul></details></li>`;
   }).join('');
   $('#filtrae').innerHTML = tegn(rod, '') || '<li class="svag">Ingen filer matcher.</li>';
 }
@@ -248,8 +276,8 @@ async function visFil(sti, ref = GREN) {
   panel.innerHTML = `
     <h3>${esc(navn)}</h3>
     <p class="svag">${esc(sti)} · ${(indhold.size / 1024).toFixed(1)} kB${gammelVersion ? ` · <b>version ${esc(ref.slice(0, 7))}</b> <a href="#" data-handling="nyeste">vis nyeste</a>` : ''}</p>
-    ${laas && !egenLaas ? `<p class="laasbanner">🔒 Låst af <b>${esc(laas.navn || laas.login)}</b> siden ${dato(laas.siden)}${laas.opgave ? ` (opgave #${esc(laas.opgave)})` : ''}. Ret ikke filen, før den er frigivet.</p>` : ''}
-    ${egenLaas ? `<p class="laasbanner egen">🔒 Du har låst filen siden ${dato(laas.siden)}. Upload din nye version, og frigiv derefter låsen.</p>` : ''}
+    ${laas && !egenLaas ? `<p class="laasbanner">${ikon('laas')}<span>Låst af <b>${esc(laas.navn || laas.login)}</b> siden ${dato(laas.siden)}${laas.opgave ? ` (opgave #${esc(laas.opgave)})` : ''}. Ret ikke filen, før den er frigivet.</span></p>` : ''}
+    ${egenLaas ? `<p class="laasbanner egen">${ikon('laas')}<span>Du har låst filen siden ${dato(laas.siden)}. Upload din nye version, og frigiv derefter låsen.</span></p>` : ''}
     <div class="filknapper">
       <a class="knap" href="${blobUrl}" download="${esc(navn)}">Download</a>
       <a class="knap sekundaer" href="https://github.com/${REPO}/blob/${GREN}/${kodetSti(sti)}" target="_blank" rel="noopener">Åbn på GitHub</a>
@@ -491,10 +519,10 @@ async function indlaesAktivitet() {
   commits = commits.filter((c) => c.author?.login !== 'github-actions[bot]').slice(0, 30);
   const oversaet = { closed: 'lukkede', reopened: 'genåbnede', labeled: 'tilføjede label til', assigned: 'tildelte', renamed: 'omdøbte', referenced: 'refererede' };
   const linjer = [
-    ...commits.map((c) => ({ tid: c.commit.author.date, html: `📝 <b>${esc(c.author?.login || c.commit.author.name)}</b> committede: ${esc(c.commit.message.split('\n')[0])}` })),
-    ...haendelser.map((h) => ({ tid: h.created_at, html: `📌 <b>${esc(h.actor?.login)}</b> ${oversaet[h.event] || esc(h.event)} <a href="${h.issue.html_url}" target="_blank" rel="noopener">#${h.issue.number} ${esc(h.issue.title)}</a>${h.label ? ` (${esc(h.label.name)})` : ''}` })),
+    ...commits.map((c) => ({ tid: c.commit.author.date, html: `<span class="linje">${ikon('commit')}<span><b>${esc(c.author?.login || c.commit.author.name)}</b> committede: ${esc(c.commit.message.split('\n')[0])}</span></span>` })),
+    ...haendelser.map((h) => ({ tid: h.created_at, html: `<span class="linje">${ikon('opgave')}<span><b>${esc(h.actor?.login)}</b> ${oversaet[h.event] || esc(h.event)} <a href="${h.issue.html_url}" target="_blank" rel="noopener">#${h.issue.number} ${esc(h.issue.title)}</a>${h.label ? ` (${esc(h.label.name)})` : ''}</span></span>` })),
   ].sort((a, b) => b.tid.localeCompare(a.tid));
-  $('#aktivitet .liste').innerHTML = linjer.map((l) => `<li>${l.html}<br><span class="svag">${dato(l.tid)}</span></li>`).join('');
+  $('#aktivitet .liste').innerHTML = linjer.map((l) => `<li>${l.html}<span class="svag">${dato(l.tid)}</span></li>`).join('');
 }
 
 // ---------- Beslutninger ----------
@@ -503,7 +531,7 @@ async function indlaesBeslutninger() {
   const beslutninger = await hentAlle(`/repos/${REPO}/issues?state=all&labels=${encodeURIComponent(LABEL_BESLUTNING)}`);
   $('#beslutninger .liste').innerHTML = beslutninger.map((b) => `
     <li><a href="${b.html_url}" target="_blank" rel="noopener">#${b.number} ${esc(b.title)}</a>
-      <br><span class="svag">${esc(b.user.login)} · ${dato(b.created_at)}</span>
+      <span class="svag">${esc(b.user.login)} · ${dato(b.created_at)}</span>
       ${b.body ? `<p>${esc(b.body)}</p>` : ''}</li>`).join('') || '<li class="svag">Ingen beslutninger logget endnu.</li>';
 }
 
@@ -513,6 +541,8 @@ const indlaesere = { opgaver: indlaesOpgaver, filer: indlaesFiler, aktivitet: in
 let aktivFane = 'opgaver';
 
 async function indlaesAktivFane() {
+  document.body.dataset.login = sessionToken ? 'ja' : 'nej';
+  if (!sessionToken) { visFejl(null); return; }   // udlogget: velkomstpladen vises i stedet for tomme kolonner
   try {
     visFejl(null);
     await indlaesere[aktivFane]();
@@ -523,7 +553,7 @@ async function indlaesAktivFane() {
 
 document.querySelectorAll('nav button').forEach((knap) => knap.addEventListener('click', () => {
   aktivFane = knap.dataset.tab;
-  document.querySelectorAll('nav button').forEach((k) => k.classList.toggle('aktiv', k === knap));
+  document.querySelectorAll('nav button').forEach((k) => { k.classList.toggle('aktiv', k === knap); if (k === knap) k.setAttribute('aria-current', 'page'); else k.removeAttribute('aria-current'); });
   document.querySelectorAll('.fane').forEach((f) => (f.hidden = f.id !== aktivFane));
   indlaesAktivFane();
 }));
@@ -563,6 +593,7 @@ $('#filtrae').addEventListener('click', (e) => {
 const dialog = $('#token-dialog');
 const opdaterTokenKnap = () => ($('#token-knap').textContent = sessionToken ? 'Logget ind' : 'Log ind');
 $('#token-knap').addEventListener('click', () => dialog.showModal());
+$('#velkommen-log-ind').addEventListener('click', () => dialog.showModal());
 dialog.addEventListener('close', () => {
   if (dialog.returnValue === 'gem') gemToken(dialog.querySelector('[name=token]').value.trim());
   if (dialog.returnValue === 'log-ud') gemToken('');
