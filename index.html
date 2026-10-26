@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEP3 Projektstyring</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Markdown, rensning af HTML og LaTeX til filvisningen -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] }, startup: { typeset: false } };</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <header>
+    <h1>SEP3 Projektstyring</h1>
+    <nav>
+      <button data-tab="opgaver" class="aktiv">Opgaver</button>
+      <button data-tab="filer">Filer</button>
+      <button data-tab="aktivitet">Aktivitet</button>
+      <button data-tab="beslutninger">Beslutninger</button>
+    </nav>
+    <a class="knap sekundaer" href="https://github.com/jacobhv98/sep3/projects" target="_blank" rel="noopener">Projects-tavle</a>
+    <button id="token-knap" class="sekundaer">Log ind</button>
+  </header>
+
+  <div id="besked" hidden></div>
+
+  <main>
+    <section id="opgaver" class="fane">
+      <form id="ny-opgave">
+        <input name="titel" placeholder="Ny opgave …" required>
+        <select name="emne">
+          <option value="">Emne</option>
+          <option>emne:koncept</option>
+          <option>emne:tegning</option>
+          <option>emne:beregning</option>
+          <option>emne:rapport</option>
+          <option>emne:moede</option>
+        </select>
+        <button>Opret</button>
+      </form>
+      <div class="tavle">
+        <div class="kolonne" data-status="todo"><h2>Todo</h2><ul></ul></div>
+        <div class="kolonne" data-status="i-gang"><h2>I gang</h2><ul></ul></div>
+        <div class="kolonne" data-status="udfoert"><h2>Udført</h2><ul></ul></div>
+      </div>
+    </section>
+
+    <section id="filer" class="fane" hidden>
+      <input id="filsoeg" placeholder="Søg i filer …">
+      <form id="upload">
+        <label class="slip"><input type="file" name="filer" multiple hidden><span class="valgte">Træk filer hertil, eller vælg dem</span></label>
+        <input name="mappe" placeholder="Mappe i repoet, fx Beregninger/Lejer">
+        <select name="opgave" class="opgavevalg" required></select>
+        <input name="besked" placeholder="Hvad uploader du?" required>
+        <button>Upload som commit</button>
+      </form>
+      <div class="filvisning">
+        <ul id="filtrae"></ul>
+        <aside id="fildetaljer"><p class="svag">Vælg en fil for at se indholdet, historikken og tilknyttede opgaver. Tekstfiler kan rettes direkte; Word- og CAD-filer låses, før de redigeres.</p></aside>
+      </div>
+    </section>
+
+    <section id="aktivitet" class="fane" hidden><ul class="liste"></ul></section>
+
+    <section id="beslutninger" class="fane" hidden>
+      <form id="ny-beslutning">
+        <input name="titel" placeholder="Beslutning, fx 'Vi vælger koncept B'" required>
+        <textarea name="begrundelse" placeholder="Begrundelse og hvem der besluttede"></textarea>
+        <button>Log beslutning</button>
+      </form>
+      <ul class="liste"></ul>
+    </section>
+  </main>
+
+  <dialog id="token-dialog">
+    <form method="dialog">
+      <h2>Log ind med GitHub-token</h2>
+      <p>Lav en <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>
+        med adgang til kun <code>jacobhv98/sep3</code> og rettighederne <b>Issues: Read and write</b> og <b>Contents: Read and write</b> (så du kan rette og uploade filer).
+        Tokenet gemmes kun i denne browser.</p>
+      <input name="token" type="password" placeholder="github_pat_…" autocomplete="off">
+      <menu>
+        <button value="log-ud" class="sekundaer">Log ud</button>
+        <button value="gem">Gem</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
