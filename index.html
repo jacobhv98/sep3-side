@@ -77,10 +77,10 @@
   <dialog id="token-dialog">
     <form method="dialog">
       <h2>Log ind med GitHub-token</h2>
-      <p>Lav en <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>
-        med adgang til kun <code>jacobhv98/sep3</code> og rettighederne <b>Issues: Read and write</b> og <b>Contents: Read and write</b> (så du kan rette og uploade filer).
+      <p>Lav et <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=SEP3-projektside" target="_blank" rel="noopener">klassisk token</a>
+        med scopet <b>repo</b> og en udløbsdato, så du kan se, rette og uploade filer og opgaver i <code>jacobhv98/sep3</code>.
         Tokenet gemmes kun i denne browser.</p>
-      <input name="token" type="password" placeholder="github_pat_…" autocomplete="off">
+      <input name="token" type="password" placeholder="ghp_… eller github_pat_…" autocomplete="off">
       <menu>
         <button value="log-ud" class="sekundaer">Log ud</button>
         <button value="gem">Gem</button>
