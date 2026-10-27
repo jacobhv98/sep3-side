@@ -1,129 +1,17 @@
 <!doctype html>
 <html lang="da">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <title>SEP3 Projektstyring</title>
-  <!-- Siden kopieres automatisk fra jacobhv98/sep3 (Github Filer/site/) til dette repo; ret den kun dér. -->
-  <link rel="preload" href="fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/barlow-600.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="style.css">
-  <!-- Markdown, rensning af HTML og LaTeX til filvisningen -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
-  <script>window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] }, startup: { typeset: false } };</script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js" async></script>
-</head>
-<body data-login="nej">
-  <header class="topbar">
-    <div class="topbar-inder">
-      <h1 class="maerke">SEP3 Projektstyring</h1>
-      <nav aria-label="Hovedmenu">
-        <button data-tab="opgaver" class="aktiv" aria-current="page">Opgaver</button>
-        <button data-tab="filer">Filer</button>
-        <button data-tab="aktivitet">Aktivitet</button>
-        <button data-tab="beslutninger">Beslutninger</button>
-      </nav>
-      <div class="topbar-handlinger">
-        <a class="knap sekundaer" href="https://github.com/users/jacobhv98/projects/1" target="_blank" rel="noopener">Projects-tavle</a>
-        <button id="token-knap" class="sekundaer">Log ind</button>
-      </div>
-    </div>
-  </header>
-
-  <div id="besked" role="alert" hidden></div>
-
-  <main>
-    <section id="velkommen" aria-labelledby="velkommen-titel">
-      <h2 id="velkommen-titel">Gruppens fælles projektside</h2>
-      <p class="indledning">Her ser du SEP3-gruppens opgaver, projektfiler, aktivitet og beslutninger fra det private repo.
-        Siden gemmer ingen data selv. Alt hentes fra GitHub med dit eget token, så kun gruppens medlemmer kan se noget.</p>
-      <p class="legende-titel">Sådan læses tavlen, når du er logget ind:</p>
-      <ul class="linjetyper" aria-label="Sådan læses tavlen">
-        <li><i class="prove todo" aria-hidden="true"></i>Stiplet kant: Todo</li>
-        <li><i class="prove go" aria-hidden="true"></i>Hel orange kant: I gang</li>
-        <li><i class="prove done" aria-hidden="true"></i>Tynd kant: Udført</li>
-      </ul>
-      <ol class="trin">
-        <li>Lav et <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=SEP3-projektside" target="_blank" rel="noopener">klassisk token</a> på GitHub med scopet <b>repo</b> og en udløbsdato.</li>
-        <li>Tryk på <b>Log ind med token</b>, og indsæt det.</li>
-        <li>Tokenet gemmes kun i din egen browser og forlader den aldrig andet end til GitHub.</li>
-      </ol>
-      <button id="velkommen-log-ind" type="button">Log ind med token</button>
-    </section>
-
-    <section id="opgaver" class="fane">
-      <div class="oversigt">
-        <div id="lamper" class="lamper" role="group" aria-label="Antal opgaver pr. status">
-          <div class="lampe" data-status="todo"><i class="lys" aria-hidden="true"></i><b>0</b><span>Todo</span></div>
-          <div class="lampe" data-status="i-gang"><i class="lys" aria-hidden="true"></i><b>0</b><span>I gang</span></div>
-          <div class="lampe" data-status="udfoert"><i class="lys" aria-hidden="true"></i><b>0</b><span>Udført</span></div>
-        </div>
-        <form id="ny-opgave" class="vaerktoejslinje">
-          <input name="titel" placeholder="Ny opgave …" aria-label="Titel på ny opgave" required>
-          <select name="emne" aria-label="Emne">
-            <option value="">Emne</option>
-            <option value="emne:koncept">Koncept</option>
-            <option value="emne:tegning">Tegning</option>
-            <option value="emne:beregning">Beregning</option>
-            <option value="emne:rapport">Rapport</option>
-            <option value="emne:moede">Møde</option>
-          </select>
-          <button>Opret</button>
-        </form>
-      </div>
-      <div class="tavle">
-        <section class="kolonne" data-status="todo" aria-label="Todo"><h2><span>Todo</span><span class="antal">0</span></h2><ul></ul></section>
-        <section class="kolonne" data-status="i-gang" aria-label="I gang"><h2><span>I gang</span><span class="antal">0</span></h2><ul></ul></section>
-        <section class="kolonne" data-status="udfoert" aria-label="Udført"><h2><span>Udført</span><span class="antal">0</span></h2><ul></ul></section>
-      </div>
-    </section>
-
-    <section id="filer" class="fane" hidden>
-      <div class="filhoved">
-        <input id="filsoeg" type="search" placeholder="Søg i filer …" aria-label="Søg i filer">
-        <form id="upload">
-          <label class="slip"><input type="file" name="filer" multiple hidden><span class="valgte">Træk filer hertil, eller vælg dem</span></label>
-          <input name="mappe" placeholder="Mappe i repoet, fx 5.Beregninger" aria-label="Mappe i repoet">
-          <select name="opgave" class="opgavevalg" aria-label="Opgave" required></select>
-          <input name="besked" placeholder="Hvad uploader du?" aria-label="Beskrivelse af upload" required>
-          <button>Upload som commit</button>
-        </form>
-      </div>
-      <div class="filvisning">
-        <ul id="filtrae"></ul>
-        <aside id="fildetaljer"><p class="svag">Vælg en fil for at se indholdet, historikken og tilknyttede opgaver. Tekstfiler kan rettes direkte; Word- og CAD-filer låses, før de redigeres.</p></aside>
-      </div>
-    </section>
-
-    <section id="aktivitet" class="fane" hidden><ul class="liste"></ul></section>
-
-    <section id="beslutninger" class="fane" hidden>
-      <form id="ny-beslutning">
-        <input name="titel" placeholder="Beslutning, fx 'Vi vælger koncept B'" aria-label="Beslutning" required>
-        <textarea name="begrundelse" placeholder="Begrundelse og hvem der besluttede" aria-label="Begrundelse"></textarea>
-        <button>Log beslutning</button>
-      </form>
-      <ul class="liste"></ul>
-    </section>
-  </main>
-
-  <dialog id="token-dialog">
-    <form method="dialog">
-      <h2>Log ind med GitHub-token</h2>
-      <p>Lav et <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=SEP3-projektside" target="_blank" rel="noopener">klassisk token</a>
-        med scopet <b>repo</b> og en udløbsdato, så du kan se, rette og uploade filer og opgaver i <code>jacobhv98/sep3</code>.
-        Tokenet gemmes kun i denne browser.</p>
-      <input name="token" type="password" placeholder="ghp_… eller github_pat_…" aria-label="GitHub-token" autocomplete="off">
-      <menu>
-        <button value="log-ud" class="sekundaer">Log ud</button>
-        <button value="gem">Gem</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <script src="app.js" type="module"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEP3 Projektside</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236366f1'/%3E%3Ctext x='16' y='22' font-size='16' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ES3%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script>try{var t=localStorage.getItem('sep3-tema');if(t==='lys')document.documentElement.dataset.tema='lys'}catch(e){}</script>
+    <script type="module" crossorigin src="./assets/index-DMt8jGjE.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-NbBCz0VO.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
